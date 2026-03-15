@@ -4,13 +4,14 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/k1v4/organization_management_service/internal/usecase"
 	"github.com/k1v4/organization_management_service/pkg/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 // t usecase.IArticleService
-func NewRouter(handler *echo.Echo, l logger.Logger) {
+func NewRouter(handler *echo.Echo, l logger.Logger, o IOrganizationService, r usecase.RuleUseCase) {
 	// Middleware
 	handler.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogURI:     true,
@@ -35,8 +36,8 @@ func NewRouter(handler *echo.Echo, l logger.Logger) {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
-	//h := handler.Group("/api/v1")
-	//{
-	//	newArticleRoutes(h, t, l)
-	//}
+	h := handler.Group("/api/v1")
+	{
+		newOrganizationRoutes(h, o, l)
+	}
 }
