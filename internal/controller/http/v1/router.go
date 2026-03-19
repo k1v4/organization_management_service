@@ -4,16 +4,45 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/k1v4/organization_management_service/internal/config"
 	"github.com/k1v4/organization_management_service/internal/usecase"
+	"github.com/k1v4/organization_management_service/pkg/jwtpkg"
 	"github.com/k1v4/organization_management_service/pkg/logger"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
+type RouterSettings struct {
+	handler *echo.Echo
+	l       logger.Logger
+	o       IOrganizationService
+	r       usecase.RuleUseCase
+	cfg     config.Config
+	tv      jwtpkg.TokenVerifier
+}
+
+func fillRouterSettings(
+	handler *echo.Echo,
+	l logger.Logger,
+	o IOrganizationService,
+	r usecase.RuleUseCase,
+	cfg config.Config,
+	tv jwtpkg.TokenVerifier,
+) *RouterSettings {
+	return &RouterSettings{
+		handler: handler,
+		l:       l,
+		o:       o,
+		r:       r,
+		cfg:     cfg,
+		tv:      tv,
+	}
+}
+
 // t usecase.IArticleService
-func NewRouter(handler *echo.Echo, l logger.Logger, o IOrganizationService, r usecase.RuleUseCase) {
+func NewRouter(rs RouterSettings) {
 	// Middleware
-	handler.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+	rs.handler.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogURI:     true,
 		LogStatus:  true,
 		LogMethod:  true,
@@ -23,8 +52,8 @@ func NewRouter(handler *echo.Echo, l logger.Logger, o IOrganizationService, r us
 			return nil
 		},
 	}))
-	handler.Use(middleware.Recover())
-	handler.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+	rs.handler.Use(middleware.Recover())
+	rs.handler.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		// TODO добавить хосты пацанов через энвы
 		AllowOrigins:     []string{"http://localhost:3000"},                                                                // Разрешить запросы с этого origin
 		AllowMethods:     []string{echo.GET, echo.PUT, echo.POST, echo.DELETE, echo.OPTIONS},                               // Разрешенные методы
@@ -32,12 +61,12 @@ func NewRouter(handler *echo.Echo, l logger.Logger, o IOrganizationService, r us
 		AllowCredentials: true,                                                                                             // Разрешить передачу кук и заголовков авторизации
 	}))
 
-	handler.GET("/api/article/health", func(c echo.Context) error {
+	rs.handler.GET("/api/article/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
-	h := handler.Group("/api/v1")
+	h := rs.handler.Group("/api/v1")
 	{
-		newOrganizationRoutes(h, o, l)
+		newOrganizationRoutes(h, rs.o, rs.l, rs.tv)
 	}
 }
