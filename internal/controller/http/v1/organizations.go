@@ -24,10 +24,10 @@ type IOrganizationService interface {
 type organizationRoutes struct {
 	t  IOrganizationService
 	l  logger.Logger
-	tv jwtpkg.TokenVerifier
+	tv *jwtpkg.TokenVerifier
 }
 
-func newOrganizationRoutes(handler *echo.Group, t IOrganizationService, l logger.Logger, tv jwtpkg.TokenVerifier) {
+func newOrganizationRoutes(handler *echo.Group, t IOrganizationService, l logger.Logger, tv *jwtpkg.TokenVerifier) {
 	r := &organizationRoutes{t, l, tv}
 
 	// POST /api/v1/organizations
@@ -354,5 +354,5 @@ func (o *organizationRoutes) UpdateOrganizationOwner(c echo.Context) error {
 		return fmt.Errorf("%s: %s", op, err)
 	}
 
-	return c.JSON(http.StatusOK, "")
+	return c.JSON(http.StatusOK, "updated")
 }

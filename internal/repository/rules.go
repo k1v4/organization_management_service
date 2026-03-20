@@ -17,8 +17,8 @@ type RulesRepository struct {
 	*postgres.Postgres
 }
 
-func NewRulesRepository(pg *postgres.Postgres) *OrganizationRepository {
-	return &OrganizationRepository{pg}
+func NewRulesRepository(pg *postgres.Postgres) *RulesRepository {
+	return &RulesRepository{pg}
 }
 
 func (r *RulesRepository) GetByOrganizationID(ctx context.Context, orgID uuid.UUID) (*entity.BookingPolicy, error) {

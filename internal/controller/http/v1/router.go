@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/k1v4/organization_management_service/internal/config"
-	"github.com/k1v4/organization_management_service/internal/usecase"
 	"github.com/k1v4/organization_management_service/pkg/jwtpkg"
 	"github.com/k1v4/organization_management_service/pkg/logger"
 	"github.com/labstack/echo/v4"
@@ -16,24 +15,24 @@ type RouterSettings struct {
 	handler *echo.Echo
 	l       logger.Logger
 	o       IOrganizationService
-	r       usecase.RuleUseCase
-	cfg     config.Config
-	tv      jwtpkg.TokenVerifier
+	p       IRulesService
+	cfg     *config.Config
+	tv      *jwtpkg.TokenVerifier
 }
 
-func fillRouterSettings(
+func FillRouterSettings(
 	handler *echo.Echo,
 	l logger.Logger,
 	o IOrganizationService,
-	r usecase.RuleUseCase,
-	cfg config.Config,
-	tv jwtpkg.TokenVerifier,
+	p IRulesService,
+	cfg *config.Config,
+	tv *jwtpkg.TokenVerifier,
 ) *RouterSettings {
 	return &RouterSettings{
 		handler: handler,
 		l:       l,
 		o:       o,
-		r:       r,
+		p:       p,
 		cfg:     cfg,
 		tv:      tv,
 	}
@@ -68,5 +67,6 @@ func NewRouter(rs RouterSettings) {
 	h := rs.handler.Group("/api/v1")
 	{
 		newOrganizationRoutes(h, rs.o, rs.l, rs.tv)
+		newRulesRoutes(h, rs.p, rs.l, rs.tv)
 	}
 }
