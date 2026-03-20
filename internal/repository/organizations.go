@@ -137,7 +137,7 @@ func (r *OrganizationRepository) Archive(ctx context.Context, id uuid.UUID) erro
 	return nil
 }
 
-func (r *OrganizationRepository) UpdateOwner(ctx context.Context, id uuid.UUID, ownerIdentityID string) error {
+func (r *OrganizationRepository) UpdateOwner(ctx context.Context, id uuid.UUID, ownerIdentityID, newOwnerIdentityID string) error {
 	sql, args, err := r.Builder.
 		Update("organizations").
 		Set("owner_identity_id", ownerIdentityID).

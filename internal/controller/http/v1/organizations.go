@@ -18,7 +18,7 @@ type IOrganizationService interface {
 	GetOrganizationByID(ctx context.Context, organizationID, userID string) (*entity.Organization, error)
 	UpdateOrganization(ctx context.Context, org *entity.Organization) (*entity.Organization, error)
 	ArchiveOrganization(ctx context.Context, id uuid.UUID, userID string) error
-	UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, ownerIdentityID string) error
+	UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, ownerIdentityID, newOwnerIdentityID string) error
 }
 
 type organizationRoutes struct {
@@ -329,6 +329,14 @@ func (o *organizationRoutes) UpdateOrganizationOwner(c echo.Context) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
+	if strings.EqualFold(req.NewOwnerIdentityID, userID) {
+		err = errorResponse(c, http.StatusBadRequest, "new_owner_identity_id is equal to current owner_id")
+		if err != nil {
+			return fmt.Errorf("%s-%s: %w", op, "failed to sent response", err)
+		}
+		return fmt.Errorf("%s: %s", op, "new_owner_identity_id is equal to current owner_id")
+	}
+
 	if len(strings.TrimSpace(req.NewOwnerIdentityID)) == 0 {
 		err = errorResponse(c, http.StatusBadRequest, "new_owner_identity_id is required")
 		if err != nil {
@@ -337,7 +345,7 @@ func (o *organizationRoutes) UpdateOrganizationOwner(c echo.Context) error {
 		return fmt.Errorf("%s: %s", op, "new_owner_identity_id is required")
 	}
 
-	err = o.t.UpdateOrganizationOwner(ctx, orgUUID, req.NewOwnerIdentityID)
+	err = o.t.UpdateOrganizationOwner(ctx, orgUUID, userID, req.NewOwnerIdentityID)
 	if err != nil {
 		err = errorResponse(c, http.StatusInternalServerError, "internal error")
 		if err != nil {

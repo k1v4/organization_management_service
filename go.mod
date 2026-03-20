@@ -11,6 +11,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/labstack/echo/v4 v4.15.1
 	go.uber.org/zap v1.27.1
+	golang.org/x/sync v0.19.0
 )
 
 require (

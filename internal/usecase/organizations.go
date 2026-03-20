@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/k1v4/organization_management_service/pkg/adapter"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/k1v4/organization_management_service/internal/entity"
 )
@@ -15,7 +16,7 @@ type IOrganizationRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Organization, error)
 	Update(ctx context.Context, org *entity.Organization) (*entity.Organization, error)
 	Archive(ctx context.Context, id uuid.UUID) error
-	UpdateOwner(ctx context.Context, id uuid.UUID, ownerIdentityID string) error
+	UpdateOwner(ctx context.Context, id uuid.UUID, ownerIdentityID, newOwnerIdentityID string) error
 }
 
 type OrganizationUseCase struct {
@@ -105,6 +106,52 @@ func (uc *OrganizationUseCase) ArchiveOrganization(ctx context.Context, orgID uu
 	return nil
 }
 
-func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, ownerIdentityID string) error {
-	return uc.repo.UpdateOwner(ctx, id, ownerIdentityID)
+func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, ownerIdentityID, newOwnerIdentityID string) error {
+	var (
+		permission bool
+		identityID *adapter.UserProfile
+	)
+
+	g, gCtx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		var err error
+		permission, err = uc.adapter.CheckPermission(gCtx, ownerIdentityID, id.String(), "ORG_OWNER_CHANGE")
+		if err != nil {
+			return fmt.Errorf("UseCase-UpdateOrganizationOwner: permission denied: %v", err)
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		identityID, err = uc.adapter.GetUserByIdentityID(gCtx, newOwnerIdentityID)
+		if err != nil {
+			return fmt.Errorf("UpdateOrganizationOwner: failed to get identity ID from user: %v", err)
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	if !permission {
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner: no access to organization")
+	}
+	if identityID == nil {
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to get new owner identity ID from user")
+	}
+
+	err := uc.repo.UpdateOwner(ctx, id, ownerIdentityID, newOwnerIdentityID)
+	if err != nil {
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner-failed to update organizations owner: %w", err)
+	}
+
+	err = uc.adapter.SetOrganizationOwner(ctx, id.String(), newOwnerIdentityID)
+	if err != nil {
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner-failed to set organizations owner: %w", err)
+	}
+
+	return nil
 }
