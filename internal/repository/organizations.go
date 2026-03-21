@@ -140,7 +140,7 @@ func (r *OrganizationRepository) Archive(ctx context.Context, id uuid.UUID) erro
 func (r *OrganizationRepository) UpdateOwner(ctx context.Context, id uuid.UUID, ownerIdentityID, newOwnerIdentityID string) error {
 	sql, args, err := r.Builder.
 		Update("organizations").
-		Set("owner_identity_id", ownerIdentityID).
+		Set("owner_identity_id", newOwnerIdentityID).
 		Set("updated_at", squirrel.Expr("now()")).
 		Where(squirrel.Eq{"id": id, "status": "active"}).
 		ToSql()

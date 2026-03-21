@@ -42,6 +42,11 @@ type Membership struct {
 	Roles        []string `json:"roles"`
 }
 
+type changeOwnerRequest struct {
+	OrganizationID     string `json:"organizationId"`
+	NewOwnerIdentityID string `json:"newOwnerIdentityId"`
+}
+
 // CheckPermission — POST /api/internal/authorization/check
 func (c *Client) CheckPermission(ctx context.Context, identityID, organizationID, permissionCode string) (bool, error) {
 	body, err := json.Marshal(checkPermissionRequest{
@@ -124,55 +129,25 @@ func (c *Client) SetOrganizationOwner(ctx context.Context, organizationID, ident
 	return nil
 }
 
-// GetMembership — GET /api/internal/organizations/{organizationId}/users/{identityId}/membership
-func (c *Client) GetMembership(ctx context.Context, organizationID, identityID string) (*Membership, error) {
-	url := fmt.Sprintf("%s/api/internal/organizations/%s/users/%s/membership", c.baseURL, organizationID, identityID)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+// ChangeOrganizationOwner — POST /api/internal/organizations/owner/change
+func (c *Client) ChangeOrganizationOwner(ctx context.Context, organizationID, newOwnerIdentityID string) error {
+	body, err := json.Marshal(changeOwnerRequest{
+		OrganizationID:     organizationID,
+		NewOwnerIdentityID: newOwnerIdentityID,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("membership.GetMembership - new request: %w", err)
+		return fmt.Errorf("membership.ChangeOrganizationOwner - marshal: %w", err)
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.post(ctx, "/api/internal/organizations/owner/change", body)
 	if err != nil {
-		return nil, fmt.Errorf("membership.GetMembership - do request: %w", err)
+		return fmt.Errorf("membership.ChangeOrganizationOwner - request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, ErrUserNotFound
-	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("membership.GetMembership - unexpected status: %d", resp.StatusCode)
-	}
-
-	var membership Membership
-	if err = json.NewDecoder(resp.Body).Decode(&membership); err != nil {
-		return nil, fmt.Errorf("membership.GetMembership - decode: %w", err)
-	}
-
-	return &membership, nil
-}
-
-// RevokeRole — DELETE /api/Organizations/{organizationId}/members/{membershipId}/roles/{roleCode}
-func (c *Client) RevokeRole(ctx context.Context, organizationID, membershipID, roleCode, token string) error {
-	url := fmt.Sprintf("%s/api/Organizations/%s/members/%s/roles/%s", c.baseURL, organizationID, membershipID, roleCode)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
-	if err != nil {
-		return fmt.Errorf("membership.RevokeRole - new request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("membership.RevokeRole - do request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("membership.RevokeRole - unexpected status: %d", resp.StatusCode)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("membership.ChangeOrganizationOwner - unexpected status: %d. resp: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	return nil

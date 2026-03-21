@@ -109,7 +109,7 @@ func (uc *OrganizationUseCase) ArchiveOrganization(ctx context.Context, orgID uu
 	return nil
 }
 
-func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, initiatorIdentityID, newOwnerIdentityID, token string) error {
+func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, initiatorIdentityID, newOwnerIdentityID string) error {
 	var (
 		permission bool
 		identityID *adapter.UserProfile
@@ -153,19 +153,8 @@ func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id u
 		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to get organization: %w", err)
 	}
 
-	// получаем membershipId текущего владельца
-	membership, err := uc.adapter.GetMembership(ctx, id.String(), org.OwnerIdentityID)
-	if err != nil {
-		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to get old owner membership: %w", err)
-	}
-
-	// снимаем роль ORG_OWNER у старого владельца
-	if err = uc.adapter.RevokeRole(ctx, id.String(), membership.MembershipID, "ORG_OWNER", token); err != nil {
-		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to revoke old owner role: %w", err)
-	}
-
 	// назначаем нового владельца в OrgMembershipService
-	if err = uc.adapter.SetOrganizationOwner(ctx, id.String(), newOwnerIdentityID); err != nil {
+	if err = uc.adapter.ChangeOrganizationOwner(ctx, id.String(), newOwnerIdentityID); err != nil {
 		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to set new owner: %w", err)
 	}
 

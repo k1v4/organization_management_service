@@ -18,7 +18,7 @@ type IOrganizationService interface {
 	GetOrganizationByID(ctx context.Context, organizationID, userID string) (*entity.Organization, error)
 	UpdateOrganization(ctx context.Context, org *entity.Organization) (*entity.Organization, error)
 	ArchiveOrganization(ctx context.Context, id uuid.UUID, userID string) error
-	UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, initiatorIdentityID, newOwnerIdentityID, token string) error
+	UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, initiatorIdentityID, newOwnerIdentityID string) error
 }
 
 type organizationRoutes struct {
@@ -43,8 +43,7 @@ func newOrganizationRoutes(handler *echo.Group, t IOrganizationService, l logger
 	handler.DELETE("/organizations/:orgId", r.ArchiveOrganization)
 
 	// PUT /api/v1/organizations/{orgId}/owner
-	// TODO если Макс добавить ручку для смены, то вернуть в строй
-	// handler.PUT("/organizations/:orgId/owner", r.UpdateOrganizationOwner)
+	handler.PUT("/organizations/:orgId/owner", r.UpdateOrganizationOwner)
 }
 
 func (o *organizationRoutes) CreateOrganization(c echo.Context) error {
@@ -284,12 +283,14 @@ func (o *organizationRoutes) UpdateOrganizationOwner(c echo.Context) error {
 		return fmt.Errorf("%s: %s", op, "new_owner_identity_id is required")
 	}
 
-	err = o.t.UpdateOrganizationOwner(ctx, orgUUID, userID, req.NewOwnerIdentityID, token)
+	err = o.t.UpdateOrganizationOwner(ctx, orgUUID, userID, req.NewOwnerIdentityID)
 	if err != nil {
 		errorResponse(c, http.StatusInternalServerError, "internal error")
 
 		return fmt.Errorf("%s: %s", op, err)
 	}
 
-	return c.JSON(http.StatusOK, "updated")
+	return c.JSON(http.StatusOK, echo.Map{
+		"status": "ok",
+	})
 }
