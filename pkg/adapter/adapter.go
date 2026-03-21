@@ -1,6 +1,9 @@
 package adapter
 
-import "net/http"
+import (
+	"net/http"
+	"time"
+)
 
 type Client struct {
 	baseURL    string
@@ -9,7 +12,9 @@ type Client struct {
 
 func NewClient(baseURL string) *Client {
 	return &Client{
-		baseURL:    baseURL,
-		httpClient: &http.Client{},
+		baseURL: baseURL,
+		httpClient: &http.Client{
+			Timeout: 1 * time.Second,
+		},
 	}
 }

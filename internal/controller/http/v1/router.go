@@ -38,7 +38,6 @@ func FillRouterSettings(
 	}
 }
 
-// t usecase.IArticleService
 func NewRouter(rs RouterSettings) {
 	// Middleware
 	rs.handler.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
@@ -54,13 +53,12 @@ func NewRouter(rs RouterSettings) {
 	rs.handler.Use(middleware.Recover())
 	rs.handler.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		// TODO добавить хосты пацанов через энвы
-		AllowOrigins:     []string{"http://localhost:3000"},                                                                // Разрешить запросы с этого origin
-		AllowMethods:     []string{echo.GET, echo.PUT, echo.POST, echo.DELETE, echo.OPTIONS},                               // Разрешенные методы
-		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization}, // Разрешенные заголовки
-		AllowCredentials: true,                                                                                             // Разрешить передачу кук и заголовков авторизации
+		AllowOrigins: []string{"*"},                                                                                    // Разрешить запросы с этого origin
+		AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE, echo.OPTIONS},                               // Разрешенные методы
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization}, // Разрешенные заголовки
 	}))
 
-	rs.handler.GET("/api/article/health", func(c echo.Context) error {
+	rs.handler.GET("/api/organizations/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 

@@ -25,3 +25,16 @@ CREATE TABLE booking_policies (
 
 CREATE INDEX idx_organizations_status ON organizations(status);
 CREATE INDEX idx_organizations_owner  ON organizations(owner_identity_id);
+
+CREATE OR REPLACE FUNCTION create_default_booking_policy()
+    RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO booking_policies (organization_id)
+    VALUES (NEW.id);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER trg_create_default_booking_policy
+    AFTER INSERT ON organizations
+    FOR EACH ROW
+EXECUTE FUNCTION create_default_booking_policy();

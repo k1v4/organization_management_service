@@ -11,17 +11,19 @@ import (
 
 type IRuleRepository interface {
 	GetByOrganizationID(ctx context.Context, orgID uuid.UUID) (*entity.BookingPolicy, error)
-	Create(ctx context.Context, orgID uuid.UUID) (*entity.BookingPolicy, error)
 	Update(ctx context.Context, policy *entity.BookingPolicy) (*entity.BookingPolicy, error)
 }
 
 type RuleUseCase struct {
 	repo    IRuleRepository
-	adapter adapter.Client
+	adapter *adapter.Client
 }
 
-func NewRuleUseCase(repo IRuleRepository) *RuleUseCase {
-	return &RuleUseCase{repo: repo}
+func NewRuleUseCase(repo IRuleRepository, adapter *adapter.Client) *RuleUseCase {
+	return &RuleUseCase{
+		repo:    repo,
+		adapter: adapter,
+	}
 }
 
 func (r *RuleUseCase) GetByOrganizationID(ctx context.Context, orgID uuid.UUID, userID string) (*entity.BookingPolicy, error) {
@@ -39,15 +41,6 @@ func (r *RuleUseCase) GetByOrganizationID(ctx context.Context, orgID uuid.UUID, 
 	}
 
 	return rules, nil
-}
-
-func (r *RuleUseCase) CreateRule(ctx context.Context, orgID uuid.UUID, userID string) (*entity.BookingPolicy, error) {
-	create, err := r.repo.Create(ctx, orgID)
-	if err != nil {
-		return nil, fmt.Errorf("CreateRule: %w", err)
-	}
-
-	return create, nil
 }
 
 func (r *RuleUseCase) UpdateRule(ctx context.Context, policy *entity.BookingPolicy, userID string) (*entity.BookingPolicy, error) {

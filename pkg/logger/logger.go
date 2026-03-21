@@ -11,7 +11,7 @@ type loggerKey string
 const (
 	LoggerKey   = loggerKey("logger")
 	RequestID   = "requestID"
-	ServiceName = "perm_place_bot"
+	ServiceName = "organization_management_service"
 )
 
 type logger struct {

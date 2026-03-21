@@ -1,11 +1,13 @@
 version: '3.8'
 
 services:
-  bot:
+  organization_management_service:
     build: .
     container_name: organization_management_service
     env_file:
       - .env
+    ports:
+      - "${REST_SERVER_PORT}:${REST_SERVER_PORT}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -13,10 +15,10 @@ services:
       - app-network
 
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: postgres_container
     env_file:
-      - auth_service/.env
+      - .env
     volumes:
       #- ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./postgres_data:/var/lib/postgresql/data

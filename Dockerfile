@@ -6,11 +6,13 @@ COPY ["go.mod", "go.sum", "./"]
 RUN go mod download
 
 COPY . .
-RUN go build -o ./bin/app cmd/bot/main.go
+RUN go build -o ./bin/app cmd/main/main.go
 
 FROM alpine AS runner
 
 COPY --from=builder /usr/local/src/bin/app /
+
+EXPOSE 80
 
 COPY migrations ./migrations
 COPY .env /

@@ -13,6 +13,7 @@ import (
 	v1 "github.com/k1v4/organization_management_service/internal/controller/http/v1"
 	"github.com/k1v4/organization_management_service/internal/repository"
 	"github.com/k1v4/organization_management_service/internal/usecase"
+	"github.com/k1v4/organization_management_service/pkg/adapter"
 	"github.com/k1v4/organization_management_service/pkg/database/postgres"
 	"github.com/k1v4/organization_management_service/pkg/httpserver"
 	"github.com/k1v4/organization_management_service/pkg/jwtpkg"
@@ -71,16 +72,24 @@ func main() {
 	rulesRepo := repository.NewRulesRepository(pg)
 	organizationsRepo := repository.NewOrganizationRepository(pg)
 
-	serviceRules := usecase.NewRuleUseCase(rulesRepo)
-	serviceOrg := usecase.NewOrganizationUseCase(organizationsRepo)
+	adapterOrgMembership := adapter.NewClient(cfg.OrgMembershipServiceAddress)
+
+	serviceRules := usecase.NewRuleUseCase(rulesRepo, adapterOrgMembership)
+	serviceOrg := usecase.NewOrganizationUseCase(organizationsRepo, adapterOrgMembership)
 
 	handler := echo.New()
-	// TODO через конфиг урл
-	tv, err := jwtpkg.NewTokenVerifier(ctx, "")
+	handler.HTTPErrorHandler = func(err error, c echo.Context) {
+		serviceLogger.Error(c.Request().Context(), err.Error())
+		handler.DefaultHTTPErrorHandler(err, c)
+	}
+
+	tv, err := jwtpkg.NewTokenVerifier(ctx, cfg.KeyCloakIssuer)
 	if err != nil {
 		serviceLogger.Error(ctx, fmt.Sprintf("app - Run - jwtpkg.NewTokenVerifier: %s", err))
 		return
 	}
+
+	serviceLogger.Info(ctx, "token verifier create successfully!")
 
 	settings := v1.FillRouterSettings(handler, serviceLogger, serviceOrg, serviceRules, cfg, tv)
 

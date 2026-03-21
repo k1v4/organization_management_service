@@ -21,11 +21,14 @@ type IOrganizationRepository interface {
 
 type OrganizationUseCase struct {
 	repo    IOrganizationRepository
-	adapter adapter.Client
+	adapter *adapter.Client
 }
 
-func NewOrganizationUseCase(repo IOrganizationRepository) *OrganizationUseCase {
-	return &OrganizationUseCase{repo: repo}
+func NewOrganizationUseCase(repo IOrganizationRepository, adapter *adapter.Client) *OrganizationUseCase {
+	return &OrganizationUseCase{
+		repo:    repo,
+		adapter: adapter,
+	}
 }
 
 func (uc *OrganizationUseCase) CreateOrganization(ctx context.Context, org *entity.Organization) (*entity.Organization, error) {
@@ -106,19 +109,20 @@ func (uc *OrganizationUseCase) ArchiveOrganization(ctx context.Context, orgID uu
 	return nil
 }
 
-func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, ownerIdentityID, newOwnerIdentityID string) error {
+func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, initiatorIdentityID, newOwnerIdentityID, token string) error {
 	var (
 		permission bool
 		identityID *adapter.UserProfile
 	)
 
+	// параллельно проверяем права инициатора и существование нового владельца
 	g, gCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
 		var err error
-		permission, err = uc.adapter.CheckPermission(gCtx, ownerIdentityID, id.String(), "ORG_OWNER_CHANGE")
+		permission, err = uc.adapter.CheckPermission(gCtx, initiatorIdentityID, id.String(), "ORG_OWNER_CHANGE")
 		if err != nil {
-			return fmt.Errorf("UseCase-UpdateOrganizationOwner: permission denied: %v", err)
+			return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to check permission: %w", err)
 		}
 		return nil
 	})
@@ -127,7 +131,7 @@ func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id u
 		var err error
 		identityID, err = uc.adapter.GetUserByIdentityID(gCtx, newOwnerIdentityID)
 		if err != nil {
-			return fmt.Errorf("UpdateOrganizationOwner: failed to get identity ID from user: %v", err)
+			return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to get new owner: %w", err)
 		}
 		return nil
 	})
@@ -140,17 +144,34 @@ func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id u
 		return fmt.Errorf("UseCase-UpdateOrganizationOwner: no access to organization")
 	}
 	if identityID == nil {
-		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to get new owner identity ID from user")
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner: new owner not found")
 	}
 
-	err := uc.repo.UpdateOwner(ctx, id, ownerIdentityID, newOwnerIdentityID)
+	// получаем текущего владельца из БД
+	org, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
-		return fmt.Errorf("UseCase-UpdateOrganizationOwner-failed to update organizations owner: %w", err)
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to get organization: %w", err)
 	}
 
-	err = uc.adapter.SetOrganizationOwner(ctx, id.String(), newOwnerIdentityID)
+	// получаем membershipId текущего владельца
+	membership, err := uc.adapter.GetMembership(ctx, id.String(), org.OwnerIdentityID)
 	if err != nil {
-		return fmt.Errorf("UseCase-UpdateOrganizationOwner-failed to set organizations owner: %w", err)
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to get old owner membership: %w", err)
+	}
+
+	// снимаем роль ORG_OWNER у старого владельца
+	if err = uc.adapter.RevokeRole(ctx, id.String(), membership.MembershipID, "ORG_OWNER", token); err != nil {
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to revoke old owner role: %w", err)
+	}
+
+	// назначаем нового владельца в OrgMembershipService
+	if err = uc.adapter.SetOrganizationOwner(ctx, id.String(), newOwnerIdentityID); err != nil {
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to set new owner: %w", err)
+	}
+
+	// обновляем owner_identity_id в БД
+	if err = uc.repo.UpdateOwner(ctx, id, org.OwnerIdentityID, newOwnerIdentityID); err != nil {
+		return fmt.Errorf("UseCase-UpdateOrganizationOwner: failed to update owner in db: %w", err)
 	}
 
 	return nil

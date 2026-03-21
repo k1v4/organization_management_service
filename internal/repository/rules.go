@@ -52,34 +52,6 @@ func (r *RulesRepository) GetByOrganizationID(ctx context.Context, orgID uuid.UU
 	return policy, nil
 }
 
-func (r *RulesRepository) Create(ctx context.Context, orgID uuid.UUID) (*entity.BookingPolicy, error) {
-	sql, args, err := r.Builder.
-		Insert("booking_policies").
-		Columns("organization_id").
-		Values(orgID).
-		Suffix("RETURNING id, organization_id, max_booking_duration_min, booking_window_days, max_active_bookings_per_user, created_at, updated_at").
-		ToSql()
-	if err != nil {
-		return nil, fmt.Errorf("RulesRepository.Create - ToSql: %w", err)
-	}
-
-	policy := &entity.BookingPolicy{}
-	err = r.Pool.QueryRow(ctx, sql, args...).Scan(
-		&policy.ID,
-		&policy.OrganizationID,
-		&policy.MaxBookingDurationMin,
-		&policy.BookingWindowDays,
-		&policy.MaxActiveBookingsPerUser,
-		&policy.CreatedAt,
-		&policy.UpdatedAt,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("RulesRepository.Create - QueryRow: %w", err)
-	}
-
-	return policy, nil
-}
-
 func (r *RulesRepository) Update(ctx context.Context, policy *entity.BookingPolicy) (*entity.BookingPolicy, error) {
 	sql, args, err := r.Builder.
 		Update("booking_policies").

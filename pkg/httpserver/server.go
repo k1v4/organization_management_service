@@ -10,7 +10,6 @@ import (
 const (
 	_defaultReadTimeout     = 5 * time.Second
 	_defaultWriteTimeout    = 5 * time.Second
-	_defaultAddr            = ":8082"
 	_defaultShutdownTimeout = 3 * time.Second
 )
 
@@ -25,7 +24,6 @@ func New(handler http.Handler, opts ...Option) *Server {
 		Handler:      handler,
 		ReadTimeout:  _defaultReadTimeout,
 		WriteTimeout: _defaultWriteTimeout,
-		Addr:         _defaultAddr,
 	}
 
 	s := &Server{

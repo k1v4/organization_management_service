@@ -15,7 +15,6 @@ import (
 )
 
 type IRulesService interface {
-	CreateRule(ctx context.Context, orgID uuid.UUID, userID string) (*entity.BookingPolicy, error)
 	UpdateRule(ctx context.Context, policy *entity.BookingPolicy, userID string) (*entity.BookingPolicy, error)
 	GetByOrganizationID(ctx context.Context, orgID uuid.UUID, userID string) (*entity.BookingPolicy, error)
 }
@@ -33,7 +32,7 @@ func newRulesRoutes(handler *echo.Group, t IRulesService, l logger.Logger, tv *j
 	handler.GET("/organizations/:orgId/policy", r.GetRules)
 
 	// PUT /api/v1/organizations/{orgId}/policy
-	handler.GET("/organizations/:orgId/policy", r.UpdateRules)
+	handler.PUT("/organizations/:orgId/policy", r.UpdateRules)
 }
 
 func (rs *rulesRoutes) GetRules(c echo.Context) error {

@@ -125,13 +125,13 @@ func (r *OrganizationRepository) Archive(ctx context.Context, id uuid.UUID) erro
 		return fmt.Errorf("OrganizationRepository.Archive - ToSql: %w", err)
 	}
 
-	_, err = r.Pool.Exec(ctx, sql, args...)
+	result, err := r.Pool.Exec(ctx, sql, args...)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return database.ErrOrganizationNotFound
-		}
-
 		return fmt.Errorf("OrganizationRepository.Archive - Exec: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return database.ErrOrganizationNotFound
 	}
 
 	return nil

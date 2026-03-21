@@ -8,7 +8,9 @@ import (
 type Config struct {
 	postgres.DBConfig
 
-	RestServerPort int `env:"REST_SERVER_PORT" env-description:"rest server port" env-default:"8080"`
+	RestServerPort              int    `env:"REST_SERVER_PORT" env-description:"rest server port" env-default:"8080"`
+	OrgMembershipServiceAddress string `env:"ORG_MEMBERSHIP_SERVICE_ADDRESS" env-description:"address of management users service"`
+	KeyCloakIssuer              string `env:"KEYCLOAK_ISSUER" env-description:"issuer of keycloak"`
 }
 
 func LoadConfig() (*Config, error) {
