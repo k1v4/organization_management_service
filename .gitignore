@@ -12,6 +12,7 @@
 *.so
 *.dylib
 
+postgres_data
 .idea
 *.env
 
