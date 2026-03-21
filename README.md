@@ -4,17 +4,6 @@
 
 ## Запуск
 
-### Переменные окружения
-
-Создай файл `.env` в корне проекта:
-
-```env
-KEYCLOAK_ISSUER=https://keycloak.vts-platform.ru/realms/organization-bookings
-MEMBERSHIP_SERVICE_URL=http://membership-service:8080
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-DB_URL=postgres://user:password@localhost:5432/orgservice
-```
-
 ### Запуск сервиса
 
 ```bash
