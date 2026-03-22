@@ -39,6 +39,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
-            cd ${{ secrets.APP_PATH }}/organization_management_service
+            cd ${{ secrets.APP_PATH }}
             git pull
             docker compose up -d --build
