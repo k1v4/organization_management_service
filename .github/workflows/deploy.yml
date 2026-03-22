@@ -1,13 +1,36 @@
-name: CI/CD Pipeline
+name: deploy
 
 on:
   push:
-    branches: [master]
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
-  deploy:
+  lint:
+    name: lint
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.1
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.11.3
+
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
@@ -16,6 +39,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
-            cd ${{ secrets.APP_PATH }}
+            cd ${{ secrets.APP_PATH }}/organization_management_service
             git pull
             docker compose up -d --build
