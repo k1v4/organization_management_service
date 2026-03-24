@@ -17,6 +17,7 @@ type IOrganizationRepository interface {
 	Update(ctx context.Context, org *entity.Organization) (*entity.Organization, error)
 	Archive(ctx context.Context, id uuid.UUID) error
 	UpdateOwner(ctx context.Context, id uuid.UUID, ownerIdentityID, newOwnerIdentityID string) error
+	SelectByStatus(ctx context.Context, ownerIdentityID string, status *entity.OrganizationStatus) ([]*entity.Organization, error)
 }
 
 type OrganizationUseCase struct {
@@ -164,4 +165,13 @@ func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id u
 	}
 
 	return nil
+}
+
+func (uc *OrganizationUseCase) SelectByStatus(ctx context.Context, ownerIdentityID string, status *entity.OrganizationStatus) ([]*entity.Organization, error) {
+	organizations, err := uc.repo.SelectByStatus(ctx, ownerIdentityID, status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get organizations: %w", err)
+	}
+
+	return organizations, nil
 }
