@@ -16,7 +16,7 @@ import (
 
 type IOrganizationService interface {
 	CreateOrganization(ctx context.Context, org *entity.Organization) (*entity.Organization, error)
-	GetOrganizationByID(ctx context.Context, organizationID, userID string) (*entity.Organization, error)
+	GetOrganizationByID(ctx context.Context, organizationID string) (*entity.Organization, error)
 	UpdateOrganization(ctx context.Context, org *entity.Organization) (*entity.Organization, error)
 	ArchiveOrganization(ctx context.Context, id uuid.UUID, userID string) error
 	UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, initiatorIdentityID, newOwnerIdentityID string) error
@@ -109,22 +109,6 @@ func (o *organizationRoutes) GetOrganization(c echo.Context) error {
 	const op = "Controller.GetOrganization"
 
 	ctx := c.Request().Context()
-
-	token := jwtpkg.ExtractToken(c)
-	if token == "" {
-		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
-
-		return fmt.Errorf("%s: %s", op, "token is required")
-	}
-
-	// получаем user id
-	userID, err := o.tv.GetIdentityID(ctx, token)
-	if err != nil {
-		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
-
-		return fmt.Errorf("%s: %s", op, err)
-	}
-
 	organizationID := c.Param("orgId")
 
 	if len(strings.TrimSpace(organizationID)) == 0 {
@@ -133,7 +117,7 @@ func (o *organizationRoutes) GetOrganization(c echo.Context) error {
 		return fmt.Errorf("%s: %s", op, "item name is required")
 	}
 
-	organization, err := o.t.GetOrganizationByID(ctx, organizationID, userID)
+	organization, err := o.t.GetOrganizationByID(ctx, organizationID)
 	if err != nil {
 		errorResponse(c, http.StatusInternalServerError, "internal error")
 
