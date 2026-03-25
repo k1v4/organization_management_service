@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
 	"github.com/k1v4/organization_management_service/internal/entity"
 	"github.com/k1v4/organization_management_service/pkg/jwtpkg"
@@ -15,10 +16,11 @@ import (
 
 type IOrganizationService interface {
 	CreateOrganization(ctx context.Context, org *entity.Organization) (*entity.Organization, error)
-	GetOrganizationByID(ctx context.Context, organizationID, userID string) (*entity.Organization, error)
+	GetOrganizationByID(ctx context.Context, organizationID string) (*entity.Organization, error)
 	UpdateOrganization(ctx context.Context, org *entity.Organization) (*entity.Organization, error)
 	ArchiveOrganization(ctx context.Context, id uuid.UUID, userID string) error
 	UpdateOrganizationOwner(ctx context.Context, id uuid.UUID, initiatorIdentityID, newOwnerIdentityID string) error
+	SelectByStatus(ctx context.Context, ownerIdentityID string, status *entity.OrganizationStatus) ([]*entity.Organization, error)
 }
 
 type organizationRoutes struct {
@@ -44,6 +46,15 @@ func newOrganizationRoutes(handler *echo.Group, t IOrganizationService, l logger
 
 	// PUT /api/v1/organizations/{orgId}/owner
 	handler.PUT("/organizations/:orgId/owner", r.UpdateOrganizationOwner)
+
+	// PUT /api/v1/organizations/active
+	handler.GET("/organizations/active", r.GetActiveOrganizations)
+
+	// PUT /api/v1/organizations/deactivated
+	handler.GET("/organizations/deactivated", r.GetDeletedOrganizations)
+
+	// PUT /api/v1/organizations
+	handler.GET("/organizations", r.GetAllOrganizations)
 }
 
 func (o *organizationRoutes) CreateOrganization(c echo.Context) error {
@@ -98,22 +109,6 @@ func (o *organizationRoutes) GetOrganization(c echo.Context) error {
 	const op = "Controller.GetOrganization"
 
 	ctx := c.Request().Context()
-
-	token := jwtpkg.ExtractToken(c)
-	if token == "" {
-		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
-
-		return fmt.Errorf("%s: %s", op, "token is required")
-	}
-
-	// получаем user id
-	userID, err := o.tv.GetIdentityID(ctx, token)
-	if err != nil {
-		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
-
-		return fmt.Errorf("%s: %s", op, err)
-	}
-
 	organizationID := c.Param("orgId")
 
 	if len(strings.TrimSpace(organizationID)) == 0 {
@@ -122,7 +117,7 @@ func (o *organizationRoutes) GetOrganization(c echo.Context) error {
 		return fmt.Errorf("%s: %s", op, "item name is required")
 	}
 
-	organization, err := o.t.GetOrganizationByID(ctx, organizationID, userID)
+	organization, err := o.t.GetOrganizationByID(ctx, organizationID)
 	if err != nil {
 		errorResponse(c, http.StatusInternalServerError, "internal error")
 
@@ -293,4 +288,91 @@ func (o *organizationRoutes) UpdateOrganizationOwner(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"status": "ok",
 	})
+}
+
+func (o *organizationRoutes) GetActiveOrganizations(c echo.Context) error {
+	const op = "Controller.GetActiveOrganizations"
+
+	ctx := c.Request().Context()
+
+	token := jwtpkg.ExtractToken(c)
+	if token == "" {
+		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
+
+		return fmt.Errorf("%s: %s", op, "token is required")
+	}
+
+	userID, err := o.tv.GetIdentityID(ctx, token)
+	if err != nil {
+		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
+
+		return fmt.Errorf("%s: %s", op, err)
+	}
+
+	orgs, err := o.t.SelectByStatus(ctx, userID, pointer.To(entity.OrganizationStatusActive))
+	if err != nil {
+		errorResponse(c, http.StatusInternalServerError, "internal error")
+
+		return fmt.Errorf("%s: %s", op, err)
+	}
+
+	return c.JSON(http.StatusOK, orgs)
+}
+
+func (o *organizationRoutes) GetDeletedOrganizations(c echo.Context) error {
+	const op = "Controller.GetDeletedOrganizations"
+
+	ctx := c.Request().Context()
+
+	token := jwtpkg.ExtractToken(c)
+	if token == "" {
+		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
+
+		return fmt.Errorf("%s: %s", op, "token is required")
+	}
+
+	userID, err := o.tv.GetIdentityID(ctx, token)
+	if err != nil {
+		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
+
+		return fmt.Errorf("%s: %s", op, err)
+	}
+
+	orgs, err := o.t.SelectByStatus(ctx, userID, pointer.To(entity.OrganizationStatusArchive))
+	if err != nil {
+		errorResponse(c, http.StatusInternalServerError, "internal error")
+
+		return fmt.Errorf("%s: %s", op, err)
+	}
+
+	return c.JSON(http.StatusOK, orgs)
+}
+
+func (o *organizationRoutes) GetAllOrganizations(c echo.Context) error {
+	const op = "Controller.GetDeletedOrganizations"
+
+	ctx := c.Request().Context()
+
+	token := jwtpkg.ExtractToken(c)
+	if token == "" {
+		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
+
+		return fmt.Errorf("%s: %s", op, "token is required")
+	}
+
+	userID, err := o.tv.GetIdentityID(ctx, token)
+	if err != nil {
+		errorResponse(c, http.StatusUnauthorized, "Unauthorized")
+
+		return fmt.Errorf("%s: %s", op, err)
+	}
+
+	orgs, err := o.t.SelectByStatus(ctx, userID, nil)
+	if err != nil {
+		errorResponse(c, http.StatusInternalServerError, "internal error")
+
+		return fmt.Errorf("%s: %s", op, err)
+	}
+
+	return c.JSON(http.StatusOK, orgs)
 }

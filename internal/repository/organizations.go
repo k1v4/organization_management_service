@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/AlekSi/pointer"
 	"github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
@@ -158,4 +159,52 @@ func (r *OrganizationRepository) UpdateOwner(ctx context.Context, id uuid.UUID, 
 	}
 
 	return nil
+}
+
+func (r *OrganizationRepository) SelectByStatus(ctx context.Context, ownerIdentityID string, status *entity.OrganizationStatus) ([]*entity.Organization, error) {
+	query := r.Builder.
+		Select("id", "name", "description", "status", "owner_identity_id", "created_at", "updated_at").
+		From("organizations").
+		Where(squirrel.Eq{"owner_identity_id": ownerIdentityID})
+
+	if status != nil {
+		query = query.Where(squirrel.Eq{"status": pointer.Get(status)})
+	}
+
+	sql, args, err := query.ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("OrganizationRepository.SelectByStatus - ToSql: %w", err)
+	}
+
+	fmt.Println(sql)
+
+	rows, err := r.Pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("OrganizationRepository.SelectByStatus - Query: %w", err)
+	}
+	defer rows.Close()
+
+	var organizations []*entity.Organization
+	for rows.Next() {
+		org := &entity.Organization{}
+		err = rows.Scan(
+			&org.ID,
+			&org.Name,
+			&org.Description,
+			&org.Status,
+			&org.OwnerIdentityID,
+			&org.CreatedAt,
+			&org.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("OrganizationRepository.SelectByStatus - Scan: %w", err)
+		}
+		organizations = append(organizations, org)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("OrganizationRepository.SelectByStatus - rows.Err: %w", err)
+	}
+
+	return organizations, nil
 }

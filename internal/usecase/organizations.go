@@ -17,6 +17,7 @@ type IOrganizationRepository interface {
 	Update(ctx context.Context, org *entity.Organization) (*entity.Organization, error)
 	Archive(ctx context.Context, id uuid.UUID) error
 	UpdateOwner(ctx context.Context, id uuid.UUID, ownerIdentityID, newOwnerIdentityID string) error
+	SelectByStatus(ctx context.Context, ownerIdentityID string, status *entity.OrganizationStatus) ([]*entity.Organization, error)
 }
 
 type OrganizationUseCase struct {
@@ -53,15 +54,7 @@ func (uc *OrganizationUseCase) CreateOrganization(ctx context.Context, org *enti
 	return organization, nil
 }
 
-func (uc *OrganizationUseCase) GetOrganizationByID(ctx context.Context, organizationID, userID string) (*entity.Organization, error) {
-	permission, err := uc.adapter.CheckPermission(ctx, userID, organizationID, "ORG_READ")
-	if err != nil {
-		return nil, fmt.Errorf("UseCase-GetOrganizationByID: permission denied: %v", err)
-	}
-	if !permission {
-		return nil, fmt.Errorf("UseCase-GetOrganizationByID: no access to organization")
-	}
-
+func (uc *OrganizationUseCase) GetOrganizationByID(ctx context.Context, organizationID string) (*entity.Organization, error) {
 	organizationUUID, err := uuid.Parse(organizationID)
 	if err != nil {
 		return nil, fmt.Errorf("UseCase-GetOrganizationByID: %s - %s", "failed to parse organizationID into uuid", organizationID)
@@ -164,4 +157,13 @@ func (uc *OrganizationUseCase) UpdateOrganizationOwner(ctx context.Context, id u
 	}
 
 	return nil
+}
+
+func (uc *OrganizationUseCase) SelectByStatus(ctx context.Context, ownerIdentityID string, status *entity.OrganizationStatus) ([]*entity.Organization, error) {
+	organizations, err := uc.repo.SelectByStatus(ctx, ownerIdentityID, status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get organizations: %w", err)
+	}
+
+	return organizations, nil
 }
