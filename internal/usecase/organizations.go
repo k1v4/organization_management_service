@@ -54,15 +54,7 @@ func (uc *OrganizationUseCase) CreateOrganization(ctx context.Context, org *enti
 	return organization, nil
 }
 
-func (uc *OrganizationUseCase) GetOrganizationByID(ctx context.Context, organizationID, userID string) (*entity.Organization, error) {
-	permission, err := uc.adapter.CheckPermission(ctx, userID, organizationID, "ORG_READ")
-	if err != nil {
-		return nil, fmt.Errorf("UseCase-GetOrganizationByID: permission denied: %v", err)
-	}
-	if !permission {
-		return nil, fmt.Errorf("UseCase-GetOrganizationByID: no access to organization")
-	}
-
+func (uc *OrganizationUseCase) GetOrganizationByID(ctx context.Context, organizationID string) (*entity.Organization, error) {
 	organizationUUID, err := uuid.Parse(organizationID)
 	if err != nil {
 		return nil, fmt.Errorf("UseCase-GetOrganizationByID: %s - %s", "failed to parse organizationID into uuid", organizationID)
