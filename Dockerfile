@@ -8,7 +8,7 @@ RUN go mod download
 COPY . .
 RUN go build -o ./bin/app cmd/main/main.go
 
-FROM alpine AS runner
+FROM mirror.gcr.io/alpine AS runner
 
 COPY --from=builder /usr/local/src/bin/app /
 
