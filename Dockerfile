@@ -1,4 +1,4 @@
-FROM golang:1.26.1-alpine AS builder
+FROM mirror.gcr.io/golang:1.26.1-alpine AS builder
 
 WORKDIR /usr/local/src
 
